@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+dataset/*.csv
+dataset/*.report.json
+dataset/video_project/
+models/*.pkl
+models/*.png
+models/*.json
+.streamlit/secrets.toml
