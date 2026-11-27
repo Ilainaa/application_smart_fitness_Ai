@@ -1,4 +1,4 @@
-﻿"""Smart Fitness AI app shell. Run: streamlit run app.py (Streamlit 1.45.1)."""
+"""Smart Fitness AI app shell. Run: streamlit run app.py (Streamlit 1.45.1)."""
 from html import escape
 from pathlib import Path
 import os
@@ -272,13 +272,16 @@ def choose_screen(artifact, model_error):
     if prefs["rule_only"]:
         notice("โหมด Rule-only: ผลลัพธ์ไม่ได้ผ่านการตรวจสอบจากโมเดลที่เทรนเอง", "warn")
     elif model_error:
-        notice(f"โหลดโมเดลไม่ได้: {model_error}", "error")
+        notice(f"โหลดโมเดลไม่ได้: {model_error}", "error",
+               f"ไฟล์ที่คาดหวัง: models/{exercise}_model.pkl")
     elif artifact is None:
-        notice("ยังไม่มีโมเดล: เก็บข้อมูล แล้วรัน 2_train_model.py", "warn")
+        notice(f"ยังไม่มีโมเดลสำหรับ {EXERCISES[exercise]}: เก็บข้อมูล แล้วรัน 2_train_model.py", "warn",
+               f"ไฟล์ที่คาดหวัง: models/{exercise}_model.pkl")
     elif missing:
         notice("โมเดลยังขาดคลาสของท่านี้: " + ", ".join(missing), "warn")
     else:
-        notice(f"Custom model พร้อมใช้งาน · {len(artifact['classes'])} classes")
+        acc_text = f" · Accuracy {artifact['accuracy']:.1%}" if "accuracy" in artifact else ""
+        notice(f"{EXERCISES[exercise]} model พร้อมใช้งาน · {len(artifact['classes'])} classes{acc_text}")
     can_start = prefs["rule_only"] or (artifact is not None and not missing)
     if st.session_state.get("setup_error"):
         notice(st.session_state.setup_error, "error")
@@ -470,8 +473,9 @@ def main():
     render_shell(screen)
     with st.container(key=f"screen_{screen}"):
         if screen == "choose":
+            exercise = st.session_state.preferences["exercise"]
             artifact, model_error = None, None
-            model_path = ROOT / "models/fitness_model.pkl"
+            model_path = ROOT / f"models/{exercise}_model.pkl"
             if model_path.exists():
                 try:
                     artifact = cached_model(str(model_path), model_path.stat().st_mtime_ns)

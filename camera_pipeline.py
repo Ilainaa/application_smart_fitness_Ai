@@ -61,6 +61,10 @@ def draw_skeleton(frame, points, valid):
 
 
 def load_model(path):
+    """Load a per-exercise or legacy unified model pkl.
+
+    Accepts both per-exercise models (2-3 classes) and legacy unified models (11 classes).
+    """
     # joblib is executable serialization: load only your locally trained trusted file.
     artifact = joblib.load(path)
     if not isinstance(artifact, dict) or artifact.get("schema_version") != SCHEMA_VERSION:

@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
-from fitness_core import CLASSES, FEATURE_COLUMNS, SCHEMA_VERSION
+from fitness_core import CLASSES, EXERCISES, FEATURE_COLUMNS, SCHEMA_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("train_model", ROOT / "2_train_model.py")
@@ -29,22 +29,47 @@ class IntegrationTests(unittest.TestCase):
                                  "schema_version": SCHEMA_VERSION, "session_id": f"s{group}"})
         return pd.DataFrame(rows)
 
-    def test_train_save_reload_and_group_isolation(self):
+    def test_train_per_exercise_save_reload(self):
+        """Train all 4 per-exercise models and verify each can be loaded."""
         from camera_pipeline import load_model
         data = self.data()
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             data.to_csv(root / "poses.csv", index=False)
             args = Namespace(data=root / "poses.csv", output=root / "models", group_by="session_id",
-                             seed=42, test_size=.25, model="rf", max_iter=50)
+                             seed=42, test_size=.25, model="rf", max_iter=50, exercise="all")
             with contextlib.redirect_stdout(io.StringIO()):
-                metadata = training.train(args)
-            artifact = load_model(root / "models/fitness_model.pkl")
-            self.assertEqual(set(artifact["pipeline"].classes_), set(CLASSES))
-            self.assertTrue(set(metadata["train_groups"]).isdisjoint(metadata["test_groups"]))
-            self.assertTrue((root / "models/confusion_matrix.png").is_file())
-            self.assertTrue((root / "models/training_metrics.json").is_file())
-            self.assertEqual(artifact["pipeline"].predict_proba(data[FEATURE_COLUMNS].iloc[:1]).shape, (1, len(CLASSES)))
+                results = training.train(args)
+            self.assertEqual(len(results), 4, "Expected 4 per-exercise models")
+            for ex, expected_classes in training.EXERCISE_CLASSES.items():
+                model_path = root / "models" / f"{ex}_model.pkl"
+                self.assertTrue(model_path.is_file(), f"Missing {model_path}")
+                artifact = load_model(model_path)
+                self.assertEqual(set(artifact["pipeline"].classes_), set(expected_classes))
+                self.assertTrue((root / "models" / f"{ex}_confusion_matrix.png").is_file())
+                self.assertTrue((root / "models" / f"{ex}_training_metrics.json").is_file())
+                # Verify predict_proba returns the right number of columns
+                probe = data[data.label.isin(expected_classes)][FEATURE_COLUMNS].iloc[:1]
+                self.assertEqual(artifact["pipeline"].predict_proba(probe).shape[1], len(expected_classes))
+            # Verify group isolation in results
+            for ex, meta in results.items():
+                if not meta.get("fallback_split"):
+                    self.assertTrue(set(meta["train_groups"]).isdisjoint(meta["test_groups"]))
+
+    def test_train_single_exercise(self):
+        """Train only one exercise model."""
+        data = self.data()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            data.to_csv(root / "poses.csv", index=False)
+            args = Namespace(data=root / "poses.csv", output=root / "models", group_by="session_id",
+                             seed=42, test_size=.25, model="rf", max_iter=50, exercise="squat")
+            with contextlib.redirect_stdout(io.StringIO()):
+                results = training.train(args)
+            self.assertIn("squat", results)
+            self.assertEqual(len(results), 1)
+            self.assertTrue((root / "models" / "squat_model.pkl").is_file())
+            self.assertFalse((root / "models" / "pushup_model.pkl").exists())
 
     def test_insufficient_groups_fail_without_frame_split(self):
         data = self.data()
