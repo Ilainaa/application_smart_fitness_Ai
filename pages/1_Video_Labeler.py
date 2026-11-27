@@ -10,10 +10,11 @@ from fitness_core import CLASSES, EXERCISES
 from video_dataset import (DEFAULT_PROJECT, DEFAULT_OUTPUT, load_project, import_video,
                            update_clip, clip_path, preview_frame, export_dataset, has_annotations)
 from frame_labeling_ui import show_frame_labeler, label_name
+from app import render_shell
 
-st.set_page_config(page_title="Video Labeler · Smart Fitness AI", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="Video Labeler · Smart Fitness AI", page_icon=":material/video_library:", layout="wide", initial_sidebar_state="collapsed")
+render_shell("labeler")
 st.markdown("""<style>
-.block-container {max-width:1180px;padding-top:2rem;padding-bottom:3rem;}
 h1 {font-size:2rem !important;letter-spacing:-.025em;}
 h2,h3 {letter-spacing:-.015em;}
 [data-testid="stCaptionContainer"] {color:#b8ceca;line-height:1.6;}
@@ -21,20 +22,20 @@ h2,h3 {letter-spacing:-.015em;}
 [data-testid="stMetricValue"] {font-size:1.6rem;}
 [data-testid="stForm"] {border-color:#2b4c4c;border-radius:14px;padding:20px;}
 [data-testid="stForm"] [data-testid="stImage"] img {max-height:260px;object-fit:contain;}
-button {min-height:44px;}
+button {min-height:48px;}
 [data-baseweb="tab"] {font-size:16px;padding:12px 20px;}
-@media(max-width:640px) {.block-container{padding:1rem;} [data-testid="stForm"]{padding:12px;}}
+@media(max-width:640px) {[data-testid="stForm"]{padding:12px;}}
 </style>""", unsafe_allow_html=True)
 st.caption("SMART FITNESS AI / DATA STUDIO")
 st.title("เตรียมข้อมูลเทรน AI")
 st.caption("ตรวจภาพ ติดป้ายให้ถูกต้อง แล้วสร้างชุดข้อมูลสำหรับโมเดลของคุณ")
-st.sidebar.page_link("app.py", label="กลับหน้าฝึกซ้อม", icon="💪")
-st.sidebar.info("ข้อมูลและป้ายกำกับบันทึกบนคอมเครื่องนี้ ปิดเว็บแล้วกลับมาทำต่อได้")
-st.sidebar.caption("ไฟล์งาน: dataset/video_project/annotations.json\n\nไฟล์ฝึก: dataset/video_pose_data.csv")
+with st.expander("ข้อมูลและป้ายกำกับบันทึกบนคอมเครื่องนี้ ปิดเว็บแล้วกลับมาทำต่อได้"):
+    st.caption("ไฟล์งาน: dataset/video_project/annotations.json\n\nไฟล์ฝึก: dataset/video_pose_data.csv")
 
 # Stop a live session before switching to offline work; do not leave a camera running.
 if st.session_state.get("active"):
     st.warning("กรุณากลับหน้าฝึกซ้อมและจบเซสชันก่อนนำเข้าวิดีโอ")
+    st.page_link("app.py", label="กลับหน้าฝึกซ้อม")
     st.stop()
 
 notice = st.session_state.pop("video_notice", None)
